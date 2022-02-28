@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/csv"
-	"fmt"
 	"io"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type FileReaderConfig struct {
@@ -49,8 +49,9 @@ func main() {
 		if config.hasHeaders && isFirstRow {
 			isFirstRow = false
 			config.headers = row
+		} else {
+			handleRow(row, config)
 		}
-		handleRow(row, config)
 	}
 }
 
@@ -58,26 +59,26 @@ func main() {
 func handleRow(row []string, config FileReaderConfig) {
 	transformations := make(map[string]string)
 	for _, transformation := range config.rowTransformations {
-		var transformedValue string
 		leftSideValue := getOperandValue(transformation.leftSideOfOperation, row, config.headers, transformations)
 		rightSideValue := getOperandValue(transformation.rightSideOfOperation, row, config.headers, transformations)
-		transformedValue = transForm(transformation, transformedValue, leftSideValue, rightSideValue)
+		transformedValue := transForm(transformation, leftSideValue, rightSideValue)
 		transformations[transformation.transformationKey] = transformedValue
 	}
-	sendToFinalDestinationByBatch(config.headers, row, transformations){}
+	sendToFinalDestinationByBatch(config.headers, row, transformations)
 }
 
 func sendToFinalDestinationByBatch(headers []string, row []string, transformations map[string]string) {
 	//TODO: implement
 }
 
-func transForm(transformation RowTransformation, transformedValue string, leftSideValue string, rightSideValue string) string {
+func transForm(transformation RowTransformation, leftSideValue string, rightSideValue string) string {
+	var transformedValue string
 	if transformation.transformationType == "concat" {
 		transformedValue = leftSideValue + rightSideValue
 	} else if transformation.transformationType == "multiply" {
-		intLeftSideValue, _ := strconv.ParseInt(leftSideValue, 0, 8)
-		intRightSideValue,_ := strconv.ParseInt(rightSideValue, 0, 8)
-		transformedValue = string((intLeftSideValue * intRightSideValue))
+		intLeftSideValue, _ := strconv.Atoi(leftSideValue)
+		intRightSideValue, _ := strconv.Atoi(rightSideValue)
+		transformedValue = strconv.Itoa(intLeftSideValue * intRightSideValue)
 	}
 	return transformedValue
 }
@@ -96,9 +97,12 @@ func getOperandValue(operation transformationOperand, row []string, headers []st
 
 func findStringPositionInArray(valueToFind string, arrayToSearch []string) int {
 	position := -1
+	valueToFind = strings.Trim(valueToFind, " ")
 	for index, element := range arrayToSearch {
+		element = strings.Trim(element, " ")
 		if element == valueToFind {
 			position = index
+			break
 		}
 	}
 	return position
